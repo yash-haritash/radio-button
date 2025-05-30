@@ -5,7 +5,7 @@
       "appearance": {
         "size": "md",
         "description": {
-          "color": "#475467",
+          "color": "#BF6A02",
           "variant": "text-xxs",
           "weight": "regular"
         },
@@ -16,7 +16,7 @@
           "margin": {
             "all": "m-lg"
           },
-          "borderColor": "border-transparent",
+          "borderColor": "#009951",
           "borderWidth": {
             "all": "border-2"
           },
@@ -24,7 +24,7 @@
           "height": "h-[44px]"
         },
         "label": {
-          "color": "#344054",
+          "color": "#32ADE6",
           "variant": "text-md",
           "weight": "medium"
         }
@@ -39,7 +39,7 @@
       "value": true
     },
     "dpOn": [],
-    "displayName": "RadioButton_ezk2r",
+    "displayName": "RadioButton_ck9vk",
     "dataSourceIds": [],
     "id": "terms-radio-1",
     "parentId": "root_id"

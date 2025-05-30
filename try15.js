@@ -46,16 +46,101 @@ function convertFigmaRadioButtonToUnify(figmaJson, overrides = {}) {
   const checkboxBase = radioInstance.children?.find(child => child.name === "Input")?.children?.find(child => child.name === "_Checkbox base") || {};
   const iconNode = findIconNode(radioInstance);
 
-  // Extract colors
-  const labelColor = textNode.fills?.[0]?.color || externalTextNode.fills?.[0]?.color || { r: 0.20392157137393951, g: 0.250980406999588, b: 0.3294117748737335, a: 1 }; // #344054 or #FFFFFF
-  const descriptionColor = supportingTextNode.fills?.[0]?.color || { r: 0.27843138575553894, g: 0.3294117748737335, b: 0.40392157435417175, a: 1 }; // #475467
-  const radioButtonColor = checkboxBase.background?.[0]?.color || iconNode?.fills?.[0]?.color || { r: 1, g: 0.8470588326454165, b: 0.8941176533699036, a: 1 }; // #6750A4 or #FFD8E4
-  const strokeColor = checkboxBase.strokes?.[0]?.color || undefined;
+  // Helper to extract solid color from fills array
+  function getSolidColorFromFills(fills) {
+    if (Array.isArray(fills)) {
+      const solid = fills.find(f => f.type === 'SOLID' && (f.visible === undefined || f.visible === true));
+      if (solid && solid.color) return solid.color;
+    }
+    return null;
+  }
 
-  const labelHex = rgbaToHex(labelColor.r, labelColor.g, labelColor.b, labelColor.a);
-  const descriptionHex = rgbaToHex(descriptionColor.r, descriptionColor.g, descriptionColor.b, descriptionColor.a);
-  const radioButtonHex = rgbaToHex(radioButtonColor.r, radioButtonColor.g, radioButtonColor.b, radioButtonColor.a);
-  const borderHex = strokeColor ? rgbaToHex(strokeColor.r, strokeColor.g, strokeColor.b, strokeColor.a) : "border-transparent";
+  // Helper to extract solid color from strokes array
+  function getSolidColorFromStrokes(strokes) {
+    if (Array.isArray(strokes)) {
+      const solid = strokes.find(f => f.type === 'SOLID' && (f.visible === undefined || f.visible === true));
+      if (solid && solid.color) return solid.color;
+    }
+    return null;
+  }
+
+  // Helper to recursively find first VECTOR node with a solid fill
+  function findVectorSolidColor(node) {
+    if (!node) return null;
+    if (node.type === 'VECTOR' && Array.isArray(node.fills)) {
+      const solid = node.fills.find(f => f.type === 'SOLID' && (f.visible === undefined || f.visible === true));
+      if (solid && solid.color) return solid.color;
+    }
+    if (Array.isArray(node.children)) {
+      for (const child of node.children) {
+        const found = findVectorSolidColor(child);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+
+  // Helper to recursively find a TEXT node by name
+  function findTextNodeByName(node, name) {
+    if (!node) return null;
+    if (node.type === 'TEXT' && node.name === name) return node;
+    if (Array.isArray(node.children)) {
+      for (const child of node.children) {
+        const found = findTextNodeByName(child, name);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+  // Helper to recursively find a FRAME or ELLIPSE node by name
+  function findShapeNodeByName(node, name) {
+    if (!node) return null;
+    if ((node.type === 'FRAME' || node.type === 'ELLIPSE') && node.name === name) return node;
+    if (Array.isArray(node.children)) {
+      for (const child of node.children) {
+        const found = findShapeNodeByName(child, name);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+
+  // Find label and description text nodes
+  const labelTextNode = findTextNodeByName(figmaNode, 'Label');
+  const descriptionTextNode = findTextNodeByName(figmaNode, 'Description');
+  // Find radio shape node for border color
+  const radioShapeNode = findShapeNodeByName(figmaNode, 'Radio');
+
+  // Extract label color from Figma fills or fallback to vector color
+  let labelColorObj = getSolidColorFromFills(labelTextNode?.fills) || getSolidColorFromFills(textNode.fills) || getSolidColorFromFills(externalTextNode.fills);
+  if (!labelColorObj) {
+    labelColorObj = findVectorSolidColor(figmaNode) || { r: 0.20392157137393951, g: 0.250980406999588, b: 0.3294117748737335, a: 1 };
+  }
+  const labelHex = rgbaToHex(labelColorObj.r, labelColorObj.g, labelColorObj.b, labelColorObj.a);
+
+  // Extract description color from Figma fills or fallback to vector color
+  let descriptionColorObj = getSolidColorFromFills(descriptionTextNode?.fills) || getSolidColorFromFills(supportingTextNode.fills);
+  if (!descriptionColorObj) {
+    descriptionColorObj = findVectorSolidColor(figmaNode) || { r: 0.27843138575553894, g: 0.3294117748737335, b: 0.40392157435417175, a: 1 };
+  }
+  const descriptionHex = rgbaToHex(descriptionColorObj.r, descriptionColorObj.g, descriptionColorObj.b, descriptionColorObj.a);
+
+  // Extract border color from Figma strokes or fallback to radio shape node
+  let borderHex = '#000000'; // fallback
+  let borderColorObj = getSolidColorFromStrokes(radioShapeNode?.strokes) || getSolidColorFromStrokes(checkboxBase.strokes);
+  if (borderColorObj) {
+    borderHex = rgbaToHex(borderColorObj.r, borderColorObj.g, borderColorObj.b, borderColorObj.a);
+  } else if (checkboxBase.background?.[0]?.color) {
+    const c = checkboxBase.background[0].color;
+    borderHex = rgbaToHex(c.r, c.g, c.b, c.a);
+  } else {
+    const vectorColor = findVectorSolidColor(figmaNode);
+    if (vectorColor) {
+      borderHex = rgbaToHex(vectorColor.r, vectorColor.g, vectorColor.b, vectorColor.a);
+    } else {
+      borderHex = '#CCCCCC';
+    }
+  }
 
   // Extract properties
   const size = getPropertyValue(props, "Size", "md").toLowerCase();
@@ -121,7 +206,7 @@ function convertFigmaRadioButtonToUnify(figmaJson, overrides = {}) {
           styles: {
             padding,
             margin,
-            borderColor: isDisabled ? '#CCCCCC' : (checkboxBase.background?.[0] ? radioButtonHex : borderHex),
+            borderColor: isDisabled ? '#CCCCCC' : borderHex,
             borderWidth,
             width,
             height
@@ -206,7 +291,7 @@ function findIconNode(node) {
 
 // Example usage with fetch
 const UNIFY_API_URL = 'https://api.qa.unifyapps.com/api-endpoint/figma/Fetch-Figma-Details';
-const FIGMA_URL = 'https://www.figma.com/design/huI2r4FfZauzyQRfwb2sTs/Untitled?node-id=2-14&t=nafiDHsCG1ytZJ0d-4';
+const FIGMA_URL = 'https://www.figma.com/design/huI2r4FfZauzyQRfwb2sTs/Untitled?node-id=15-92&t=kOCv1WOjWdUgrurr-4';
 
 const data = { fileUrl: FIGMA_URL };
 
