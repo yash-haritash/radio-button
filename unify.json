@@ -1,0 +1,36 @@
+{
+  "terms-radio-1": {
+    "component": {
+      "componentType": "RadioButton",
+      "appearance": {
+        "size": "sm",
+        "description": {
+          "color": "#475467",
+          "variant": "text-xxs",
+          "weight": "regular"
+        },
+        "styles": {
+          "borderColor": "#5C37EB"
+        },
+        "label": {
+          "color": "#344054",
+          "variant": "text-sm",
+          "weight": "medium"
+        }
+      },
+      "content": {
+        "label": "Remember me",
+        "description": "Save my login details for next time.",
+        "checked": true
+      }
+    },
+    "visibility": {
+      "value": true
+    },
+    "dpOn": [],
+    "displayName": "RadioButton_ywjin",
+    "dataSourceIds": [],
+    "id": "terms-radio-1",
+    "parentId": "root_id"
+  }
+}
