@@ -160,7 +160,7 @@ function findIconNode(node) {
 
 // Example usage with fetch
 const UNIFY_API_URL = 'https://api.qa.unifyapps.com/api-endpoint/figma/Fetch-Figma-Details';
-const FIGMA_URL = 'https://www.figma.com/design/huI2r4FfZauzyQRfwb2sTs/Untitled?node-id=2-14&t=nafiDHsCG1ytZJ0d-4';
+const FIGMA_URL = 'https://www.figma.com/design/huI2r4FfZauzyQRfwb2sTs/Untitled?node-id=5-67&t=nafiDHsCG1ytZJ0d-4';
 
 const data = { fileUrl: FIGMA_URL };
 

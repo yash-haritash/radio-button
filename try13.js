@@ -1,3 +1,4 @@
+
 const FONT_SIZE_MAP = {
   'heading-1': 72, 'heading-2': 60, 'heading-3': 48, 'heading-4': 44,
   'subtitle-1': 30, 'subtitle-2': 24, 'body-1': 20, 'body-2': 18,
@@ -16,56 +17,92 @@ const SIZE_MAPPINGS = {
   }
 };
 
+const TAILWIND_COLOR_MAP = {
+  '#344054': 'text-gray-700', // Label color (fallback)
+  '#475467': 'text-secondary', // Description color (fallback)
+  '#5C37EB': 'text-purple-700', // Checkbox base color
+  '#FFD8E4': 'text-pink-200', // Icon color fallback
+  '#6750A4': 'text-purple-500', // Icon color for node "5:67"
+  '#FFFFFF': 'white', // Text color for "Text is best"
+  '#CCCCCC': 'text-gray-400' // Disabled color
+};
+
 function convertFigmaRadioButtonToUnify(figmaJson, overrides = {}) {
   // Helper function to convert RGBA to hex
   function rgbaToHex(r, g, b, a) {
     const toHex = (value) => {
       const hex = Math.round(value * 255).toString(16);
-      return hex.length === 1 ? "0" + hex : hex;
+      return hex.length === 1 ? '0' + hex : hex;
     };
-    const hex = `#${toHex(r)}${toHex(g)}${toHex(b)}${a < 1 ? toHex(a) : ""}`;
-    return hex.toUpperCase();
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}${a < 1 ? toHex(a) : ""}`.toUpperCase();
+  }
+
+  // Map hex to Tailwind class
+  function mapToTailwindColor(hex) {
+    return TAILWIND_COLOR_MAP[hex.toUpperCase()] || hex;
   }
 
   // Extract nodes
   const nodes = figmaJson.Result?.nodes || figmaJson.nodes || {};
   const nodeKey = Object.keys(nodes)[0];
   const figmaNode = nodes[nodeKey]?.document || {};
-  const props = figmaNode.componentProperties || {};
+  // Find radio button instance
+  const radioInstance = figmaNode.children?.find(child => child.name === "Radio Buttons" && child.type === "INSTANCE") || {};
+  const props = radioInstance.componentProperties || {};
 
-  // Find text and supporting text nodes
-  const textFrame = figmaNode.children?.find(child => child.name === "Text and supporting text")?.children || [];
+  // Find text and supporting text nodes within radio instance
+  const textFrame = radioInstance.children?.find(child => child.name === "Text and supporting text")?.children || [];
   const textNode = textFrame.find(child => child.name === "Text") || {};
   const supportingTextNode = textFrame.find(child => child.name === "Supporting text") || {};
 
+  // Find external text node (e.g., "Text is best") in parent frame
+  const externalTextNode = figmaNode.children?.find(child => child.type === "TEXT" && child.characters) || {};
+
   // Find radio button base or icon node
-  const checkboxBase = figmaNode.children?.find(child => child.name === "Input")?.children?.find(child => child.name === "_Checkbox base") || {};
-  const iconNode = findIconNode(figmaNode);
+  const checkboxBase = radioInstance.children?.find(child => child.name === "Input")?.children?.find(child => child.name === "_Checkbox base") || {};
+  const iconNode = findIconNode(radioInstance);
 
   // Extract colors
-  const labelColor = textNode.fills?.[0]?.color || { r: 0.20392157137393951, g: 0.250980406999588, b: 0.3294117748737335, a: 1 }; // #344054
+  const labelColor = textNode.fills?.[0]?.color || externalTextNode.fills?.[0]?.color || { r: 0.20392157137393951, g: 0.250980406999588, b: 0.3294117748737335, a: 1 }; // #344054 or #FFFFFF
   const descriptionColor = supportingTextNode.fills?.[0]?.color || { r: 0.27843138575553894, g: 0.3294117748737335, b: 0.40392157435417175, a: 1 }; // #475467
-  const radioButtonColor = checkboxBase.background?.[0]?.color || iconNode?.fills?.[0]?.color || { r: 1, g: 0.8470588326454163, b: 0.8941176533699036, a: 1 }; // #5C37EB or #FFD8E4
+  const radioButtonColor = checkboxBase.background?.[0]?.color || iconNode?.fills?.[0]?.color || { r: 1, g: 0.8470588326454165, b: 0.8941176533699036, a: 1 }; // #6750A4 or #FFD8E4
+  const strokeColor = checkboxBase.strokes?.[0]?.color || undefined;
 
   const labelHex = rgbaToHex(labelColor.r, labelColor.g, labelColor.b, labelColor.a);
   const descriptionHex = rgbaToHex(descriptionColor.r, descriptionColor.g, descriptionColor.b, descriptionColor.a);
   const radioButtonHex = rgbaToHex(radioButtonColor.r, radioButtonColor.g, radioButtonColor.b, radioButtonColor.a);
+  const borderHex = strokeColor ? mapToTailwindColor(rgbaToHex(strokeColor.r, strokeColor.g, strokeColor.b, strokeColor.a)) : "border-transparent";
 
   // Extract properties
   const size = getPropertyValue(props, "Size", "md").toLowerCase();
-  const isDisabled = getPropertyValue(props, "State") === "Disabled"; // Fixed logic
+  const isDisabled = getPropertyValue(props, "State") === "Disabled";
   const checked = getPropertyValue(props, "Checked") === "True" || getPropertyValue(props, "Selected") === "True";
-  const label = overrides.label || textNode.characters || getPropertyValue(props, "Label");
-  const description = overrides.description || supportingTextNode.characters || getPropertyValue(props, "Description");
+  const label = overrides.label || textNode.characters || externalTextNode.characters || getPropertyValue(props, "Label");
+  const description = overrides.description || supportingTextNode?.characters || getPropertyValue(props, "Description");
+  const defaultValue = overrides.defaultValue || getPropertyValue(props, "DefaultValue");
   const id = overrides.id || generateId("b_");
 
   // Map font weight
-  const fontWeight = textNode.style?.fontWeight ? mapFontWeightFromNumeric(textNode.style.fontWeight) : 'medium';
+  const fontWeight = textNode.style?.fontWeight || externalTextNode.style?.fontWeight ? mapFontWeightFromNumeric(textNode.style?.fontWeight || externalTextNode.style?.fontWeight) : 'medium';
+
+  // Map layout properties
+  const padding = {
+    all: figmaNode.paddingLeft ? `p-${Math.round(figmaNode.paddingLeft / 4)}xl` : 'p-3xl'
+  };
+  const margin = {
+    all: figmaNode.margin ? `m-${Math.round(figmaNode.margin / 4)}lg` : 'm-lg'
+  };
+  const borderWidth = {
+    all: checkboxBase.strokeWeight ? `border-${Math.round(checkboxBase.strokeWeight)}` : 'border-2'
+  };
+  const width = figmaNode.absoluteBoundingBox?.width ? `w-[${figmaNode.absoluteBoundingBox.width}px]` : SIZE_MAPPINGS.width[size] || 'w-[360px]';
+  const height = figmaNode.absoluteBoundingBox?.height ? `h-[${figmaNode.absoluteBoundingBox.height}px]` : SIZE_MAPPINGS.height[size] || 'h-[360px]';
 
   // Build content object, omitting empty label and description
   const content = {};
   if (label) content.label = label;
   if (description) content.description = description;
+  if (defaultValue) content.defaultValue = defaultValue;
   content.checked = checked;
 
   return {
@@ -75,15 +112,20 @@ function convertFigmaRadioButtonToUnify(figmaJson, overrides = {}) {
         appearance: {
           size: mapUnifySize(size),
           description: {
-            color: isDisabled ? '#CCCCCC' : descriptionHex,
+            color: isDisabled ? 'text-gray-400' : mapToTailwindColor(descriptionHex),
             variant: 'text-xxs',
             weight: 'regular'
           },
           styles: {
-            borderColor: isDisabled ? '#CCCCCC' : radioButtonHex
+            padding,
+            margin,
+            borderColor: isDisabled ? 'text-gray-400' : (checkboxBase.background?.[0] ? mapToTailwindColor(radioButtonHex) : borderHex),
+            borderWidth,
+            width,
+            height
           },
           label: {
-            color: isDisabled ? '#CCCCCC' : labelHex,
+            color: isDisabled ? 'text-gray-400' : mapToTailwindColor(labelHex),
             variant: mapTextVariant(size),
             weight: fontWeight
           }
@@ -93,11 +135,11 @@ function convertFigmaRadioButtonToUnify(figmaJson, overrides = {}) {
       visibility: {
         value: !isDisabled
       },
-      dpOn: mapInteractions(figmaNode),
+      dpOn: mapInteractions(radioInstance),
       displayName: overrides.displayName || generateDisplayName("RadioButton"),
       dataSourceIds: [],
       id,
-      parentId: overrides.parentId || "root_id"
+      parentId: "root_id"
     }
   };
 }
@@ -148,7 +190,6 @@ function mapInteractions(node) {
 }
 
 function findIconNode(node) {
-  // Search for the icon node recursively
   if (node.type === 'VECTOR' && node.name === 'icon') {
     return node;
   }
@@ -163,9 +204,7 @@ function findIconNode(node) {
 
 // Example usage with fetch
 const UNIFY_API_URL = 'https://api.qa.unifyapps.com/api-endpoint/figma/Fetch-Figma-Details';
-const FIGMA_URL = 'https://www.figma.com/design/4r7C2sI9cktH4T8atJhmrW/Component-Sheet?node-id=1-5780&t=8vX50lbVZBv3d1KO-4';
-
-// const FIGMA_URL = 'https://www.figma.com/design/huI2r4FfZauzyQRfwb2sTs/Untitled?node-id=2-14&t=nafiDHsCG1ytZJ0d-4';
+const FIGMA_URL = 'https://www.figma.com/design/huI2r4FfZauzyQRfwb2sTs/Untitled?node-id=5-67&t=nafiDHsCG1ytZJ0d-4';
 
 const data = { fileUrl: FIGMA_URL };
 

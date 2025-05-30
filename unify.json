@@ -3,32 +3,43 @@
     "component": {
       "componentType": "RadioButton",
       "appearance": {
-        "size": "sm",
+        "size": "md",
         "description": {
           "color": "#475467",
           "variant": "text-xxs",
           "weight": "regular"
         },
         "styles": {
-          "borderColor": "#5C37EB"
+          "padding": {
+            "all": "p-3xl"
+          },
+          "margin": {
+            "all": "m-lg"
+          },
+          "borderColor": "border-transparent",
+          "borderWidth": {
+            "all": "border-2"
+          },
+          "width": "w-[340px]",
+          "height": "h-[44px]"
         },
         "label": {
           "color": "#344054",
-          "variant": "text-sm",
+          "variant": "text-md",
           "weight": "medium"
         }
       },
       "content": {
-        "label": "Remember me",
-        "description": "Save my login details for next time.",
-        "checked": true
+        "label": "Chirag",
+        "description": "Yash Bhai best",
+        "checked": false
       }
     },
     "visibility": {
       "value": true
     },
     "dpOn": [],
-    "displayName": "RadioButton_ywjin",
+    "displayName": "RadioButton_ezk2r",
     "dataSourceIds": [],
     "id": "terms-radio-1",
     "parentId": "root_id"

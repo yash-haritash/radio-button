@@ -1,6 +1,6 @@
 const url = 'https://api.qa.unifyapps.com/api-endpoint/figma/Fetch-Figma-Details';
 const data = {
-  fileUrl: 'https://www.figma.com/design/4r7C2sI9cktH4T8atJhmrW/Component-Sheet?node-id=1-5780&t=Br3U1RuFVDcShCrR-4',
+  fileUrl: 'https://www.figma.com/design/huI2r4FfZauzyQRfwb2sTs/Untitled?node-id=5-67&t=nafiDHsCG1ytZJ0d-4',
 };
 fetch(url, {
   method: 'POST',
